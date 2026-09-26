@@ -26,59 +26,45 @@ Delivered by this change:
   to fuel/maintenance costs; and
 - tests and documentation for the source/data contracts.
 
-## Member 3 — serving, orchestration, observability and final evidence
+## Member 3 — final reviewer, evidence owner and submission integrator
 
-Create a separate branch from the latest Member 2 commit and implement the
-following. These tasks are deliberately non-overlapping and together close the
-remaining rubric items.
+The missing functional layers have now been implemented in this branch:
 
-1. **Serving store and API**
-   - Extend Docker Compose with PostgreSQL and a FastAPI service.
-   - Create tables/upsert logic for the newest utilization row per
-     `(window_start, window_end, zone)` and for daily per-vehicle profitability.
-     The source columns are documented in `README.md`; read the generated
-     Parquet outputs rather than changing the processor's schema.
-   - Implement `GET /health`, `GET /metrics/fleet`, and
-     `GET /reports/profitability/{report_date}`. The metrics endpoint must
-     return window, zone, idle ratio, active-event count and observed earnings.
+- PostgreSQL schema/upsert adapter and FastAPI serving endpoints;
+- Docker Compose services for PostgreSQL, FastAPI and optional Airflow;
+- Airflow DAG for the five-minute simulated daily reconciliation;
+- JSON logging, Prometheus-style API metrics, and a 60-second no-data health
+  rule that persists alert transitions; and
+- a report draft, runbook and submission checklist under `docs/`.
 
-2. **Airflow daily orchestration**
-   - Add an Airflow service and a DAG that runs in this order: create one dated
-     expense CSV, wait/validate the expected file, run the profitability Spark
-     job, load the report into PostgreSQL, and log the resulting record count.
-   - Make the DAG date parameter explicit so the expense file and report use
-     the same logical date. For a demo, schedule every five minutes or trigger
-     manually.
+Member 3 should now work as the independent final reviewer rather than duplicate
+the implementation. Their required deliverables are:
 
-3. **Observability**
-   - Replace ad-hoc prints in the existing producer with JSON/structured logs
-     (event name, timestamp, vehicle/topic, status and error fields).
-   - Add a health-check/alert rule that becomes unhealthy when no telemetry is
-     processed for more than 60 seconds; surface it through `/health` and log
-     an alert. Add basic counters for received, rejected and processed events.
-   - Document how the marker is demonstrated: stop the producer, wait 60
-     seconds, call `/health`, then restart it.
-
-4. **Submission evidence**
-   - Finish Docker Compose setup/run instructions and add API/integration tests.
-   - Capture screenshots of Kafka/producer activity, Spark output, the daily
-     report, API responses and the no-data alert.
-   - Draft the report sections: architecture diagram; Lambda-vs-Kappa argument
-     and rejected Kappa alternative; per-tool justification; observability;
-     limitations/production-scale improvements; and all three contributions.
+1. Follow `docs/DEMO_AND_SUBMISSION_CHECKLIST.md` end-to-end on a clean clone.
+   Record defects as GitHub issues and fix only verified defects on a review
+   branch; do not change data contracts without team agreement.
+2. Capture genuine screenshots of the running producer, Spark stream, API
+   `/metrics/fleet`, daily profitability endpoint, Airflow successful DAG, and
+   the `/health` 60-second no-data alert/recovery. Replace each marked evidence
+   placeholder in `docs/FINAL_REPORT.md`.
+3. Record a 5–10 minute demo video, export `docs/FINAL_REPORT.md` to the final
+   PDF, and verify the repository contains no credentials, virtual environments,
+   Maven/Ivy caches, generated data or other large runtime files.
+4. Check every rubric row against the final checklist, open a pull request with
+   the screenshots/report only, and obtain the team’s final approval before
+   submission.
 
 ## Integration acceptance checklist
 
 Before merging the three branches, demonstrate the following in order:
 
-1. `docker compose up` starts Kafka, PostgreSQL, Airflow and the API.
+1. `docker compose up -d kafka postgres api` starts Kafka, PostgreSQL and the API.
 2. The producer emits events and Spark writes clean telemetry plus five-minute
    metrics to Parquet.
 3. A dated expense CSV appears every five real minutes (or via the Airflow DAG).
 4. The daily Spark job produces a report containing all 20 vehicles and at
    least the revenue, costs, profit and profitability status columns.
-5. The API returns current utilization and the selected day's unprofitable
-   vehicles.
+5. The API returns current utilization and the selected day's unprofitable vehicles.
 6. Stopping the producer causes the documented no-data health alert within
    60 seconds; restarting it returns the service to healthy.
 

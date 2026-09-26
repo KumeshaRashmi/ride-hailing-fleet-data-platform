@@ -2,6 +2,9 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.ivy2/
+.pip-temp/
+.spark-temp/
 
 # Runtime data and Spark checkpoints are reproducible and can grow quickly.
 data_lake/

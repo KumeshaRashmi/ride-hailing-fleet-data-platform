@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import argparse
-import json
+import os
 import sys
 from datetime import date
 from pathlib import Path
@@ -11,6 +11,11 @@ from typing import Any
 
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from observability.logging import get_logger, log_event
+
+
+LOGGER = get_logger("fleet.profitability_job")
 
 
 def build_profitability_report(expenses: Any, raw_events: Any, report_date: str) -> Any:
@@ -74,6 +79,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-root", default="data_lake/profitability_reports")
     parser.add_argument("--csv-output-root", default="reports/profitability")
     parser.add_argument(
+        "--postgres-dsn",
+        default=os.getenv("FLEET_DATABASE_URL"),
+        help="Optional PostgreSQL DSN to upsert the daily serving report.",
+    )
+    parser.add_argument(
         "--report-date",
         type=date.fromisoformat,
         required=True,
@@ -88,6 +98,10 @@ def main() -> None:
     from pyspark.sql import functions as F  # pylint: disable=import-outside-toplevel
 
     report_date = args.report_date.isoformat()
+    if args.postgres_dsn:
+        from storage.postgres import initialize_schema  # pylint: disable=import-outside-toplevel
+
+        initialize_schema(args.postgres_dsn)
     spark = SparkSession.builder.appName("fleet-daily-profitability-reconciliation").getOrCreate()
     try:
         expenses = (
@@ -105,16 +119,21 @@ def main() -> None:
         csv_path = str(Path(args.csv_output_root) / f"report_date={report_date}")
         report.write.mode("overwrite").parquet(parquet_path)
         report.coalesce(1).write.mode("overwrite").option("header", "true").csv(csv_path)
-        print(
-            json.dumps(
-                {
-                    "event": "daily_profitability_report_created",
-                    "report_date": report_date,
-                    "parquet_path": parquet_path,
-                    "csv_path": csv_path,
-                    "vehicle_count": report.count(),
-                }
-            )
+        report_rows = list(report.toLocalIterator())
+        if args.postgres_dsn:
+            from storage.postgres import upsert_daily_profitability  # pylint: disable=import-outside-toplevel
+
+            postgres_rows_upserted = upsert_daily_profitability(report_rows, args.postgres_dsn)
+        else:
+            postgres_rows_upserted = 0
+        log_event(
+            LOGGER,
+            "daily_profitability_report_created",
+            report_date=report_date,
+            parquet_path=parquet_path,
+            csv_path=csv_path,
+            vehicle_count=len(report_rows),
+            postgres_rows_upserted=postgres_rows_upserted,
         )
     finally:
         spark.stop()

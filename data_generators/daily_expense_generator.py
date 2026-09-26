@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import argparse
 import csv
-import json
 import random
 import time
 from datetime import date, timedelta
@@ -17,6 +16,7 @@ from pathlib import Path
 from typing import Sequence
 
 from data_generators.streaming_generator import VEHICLES
+from observability.logging import get_logger, log_event
 
 
 EXPENSE_COLUMNS: Sequence[str] = (
@@ -28,6 +28,7 @@ EXPENSE_COLUMNS: Sequence[str] = (
     "service_flag",
 )
 DEFAULT_SIMULATED_DAY_SECONDS = 300
+LOGGER = get_logger("fleet.daily_expense_generator")
 
 
 def generate_expense_record(
@@ -142,15 +143,12 @@ def main() -> None:
             report_date,
             overwrite=args.overwrite,
         )
-        print(
-            json.dumps(
-                {
-                    "event": "daily_expense_file_created",
-                    "report_date": report_date.isoformat(),
-                    "path": str(file_path),
-                    "record_count": len(VEHICLES),
-                }
-            )
+        log_event(
+            LOGGER,
+            "daily_expense_file_created",
+            report_date=report_date.isoformat(),
+            path=str(file_path),
+            record_count=len(VEHICLES),
         )
 
         if args.once:

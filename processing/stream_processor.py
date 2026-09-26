@@ -12,7 +12,7 @@ PostgreSQL without losing the audit trail.
 from __future__ import annotations
 
 import argparse
-import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -21,6 +21,10 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from processing.common import VALID_STATUSES
+from observability.logging import get_logger, log_event
+
+
+LOGGER = get_logger("fleet.stream_processor")
 
 
 def telemetry_schema() -> Any:
@@ -123,15 +127,37 @@ def create_utilization_metrics(clean_events: Any) -> Any:
     return metrics
 
 
-def write_metrics_batch(batch_dataframe: Any, batch_id: int, metrics_path: str) -> None:
+def write_metrics_batch(
+    batch_dataframe: Any,
+    batch_id: int,
+    metrics_path: str,
+    postgres_dsn: str | None = None,
+) -> None:
     """Append one update-mode micro-batch plus traceable processing metadata."""
     from pyspark.sql import functions as F  # pylint: disable=import-outside-toplevel
 
-    (
+    persisted_batch = (
         batch_dataframe.withColumn("spark_batch_id", F.lit(batch_id))
         .withColumn("processed_at", F.current_timestamp())
-        .write.mode("append")
-        .parquet(metrics_path)
+    )
+    persisted_batch.write.mode("append").parquet(metrics_path)
+
+    rows = list(persisted_batch.toLocalIterator())
+    telemetry_events = sum(int(row.telemetry_event_count) for row in rows)
+    if postgres_dsn:
+        from storage.postgres import upsert_utilization_metrics  # pylint: disable=import-outside-toplevel
+
+        upserted_count = upsert_utilization_metrics(rows, postgres_dsn)
+    else:
+        upserted_count = 0
+    log_event(
+        LOGGER,
+        "utilization_metrics_batch_written",
+        spark_batch_id=batch_id,
+        metric_rows=len(rows),
+        telemetry_events=telemetry_events,
+        parquet_path=metrics_path,
+        postgres_rows_upserted=upserted_count,
     )
 
 
@@ -143,6 +169,7 @@ def start_queries(
     metrics_path: str,
     checkpoint_root: str,
     trigger_seconds: int,
+    postgres_dsn: str | None = None,
 ) -> tuple[Any, Any]:
     """Start raw and aggregate query branches and return their query handles."""
     kafka_stream = (
@@ -169,7 +196,11 @@ def start_queries(
         .outputMode("update")
         .option("checkpointLocation", str(Path(checkpoint_root) / "utilization_metrics"))
         .trigger(processingTime=f"{trigger_seconds} seconds")
-        .foreachBatch(lambda dataframe, batch_id: write_metrics_batch(dataframe, batch_id, metrics_path))
+        .foreachBatch(
+            lambda dataframe, batch_id: write_metrics_batch(
+                dataframe, batch_id, metrics_path, postgres_dsn
+            )
+        )
         .start()
     )
     return raw_query, metrics_query
@@ -183,6 +214,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--metrics-path", default="data_lake/realtime_utilization_metrics")
     parser.add_argument("--checkpoint-root", default="data_lake/checkpoints")
     parser.add_argument("--trigger-seconds", type=int, default=10)
+    parser.add_argument(
+        "--postgres-dsn",
+        default=os.getenv("FLEET_DATABASE_URL"),
+        help="Optional PostgreSQL DSN to upsert live metrics for the serving API.",
+    )
     return parser.parse_args()
 
 
@@ -193,6 +229,12 @@ def main() -> None:
 
     from pyspark.sql import SparkSession  # pylint: disable=import-outside-toplevel
 
+    if args.postgres_dsn:
+        from storage.postgres import initialize_schema  # pylint: disable=import-outside-toplevel
+
+        initialize_schema(args.postgres_dsn)
+        log_event(LOGGER, "serving_schema_ready")
+
     spark = SparkSession.builder.appName("fleet-telemetry-stream-processor").getOrCreate()
     raw_query, metrics_query = start_queries(
         spark,
@@ -202,16 +244,15 @@ def main() -> None:
         args.metrics_path,
         args.checkpoint_root,
         args.trigger_seconds,
+        args.postgres_dsn,
     )
-    print(
-        json.dumps(
-            {
-                "event": "spark_streaming_started",
-                "raw_query_id": raw_query.id,
-                "metrics_query_id": metrics_query.id,
-                "topic": args.topic,
-            }
-        )
+    log_event(
+        LOGGER,
+        "spark_streaming_started",
+        raw_query_id=raw_query.id,
+        metrics_query_id=metrics_query.id,
+        topic=args.topic,
+        postgres_enabled=bool(args.postgres_dsn),
     )
     try:
         spark.streams.awaitAnyTermination()
@@ -220,6 +261,7 @@ def main() -> None:
             if query.isActive:
                 query.stop()
         spark.stop()
+        log_event(LOGGER, "spark_streaming_stopped")
 
 
 if __name__ == "__main__":
