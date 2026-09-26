@@ -1,1 +1,5 @@
-kafka-python>=3.0.0
+# kafka-python's current stable major version is 2.x.  The original >=3.0.0
+# constraint cannot be installed from PyPI.
+kafka-python>=2.0,<3.0
+pyspark==3.5.5
+pytest>=8.0,<9.0
