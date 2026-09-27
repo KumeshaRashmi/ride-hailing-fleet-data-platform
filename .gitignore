@@ -10,3 +10,96 @@ __pycache__/
 data_lake/
 reports/
 logs/
+# ==============================
+# Python
+# ==============================
+
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ==============================
+# Environment / Secrets
+# ==============================
+
+.env
+.env.*
+!.env.example
+
+# ==============================
+# IDE / Editors
+# ==============================
+
+.vscode/
+.idea/
+*.iml
+
+# ==============================
+# OS files
+# ==============================
+
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ==============================
+# Spark
+# ==============================
+
+checkpoints/
+spark-warehouse/
+metastore_db/
+*.crc
+
+# ==============================
+# Logs
+# ==============================
+
+*.log
+logs/
+
+# ==============================
+# Temporary files
+# ==============================
+
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# ==============================
+# Data files
+# ==============================
+
+*.csv
+*.json
+*.parquet
+
+# Keep project sample data if needed
+# !data/sample.csv
+# !data/sample.json
+
+# ==============================
+# Build / distribution
+# ==============================
+
+build/
+dist/
+*.egg-info/
+
+# ==============================
+# Jupyter
+# ==============================
+
+.ipynb_checkpoints/
