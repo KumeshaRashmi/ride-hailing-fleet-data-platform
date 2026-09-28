@@ -53,9 +53,12 @@ for the end-to-end evidence required by the assignment.
 ## 5. Final deliverables
 
 - [ ] Replace each `[INSERT REAL SCREENSHOT]` marker in `docs/FINAL_REPORT.md`.
+- [ ] Follow `docs/REPORT_FINALIZATION_GUIDE.md` to verify rubric coverage,
+  result values, screenshot links, and PDF readability.
 - [ ] Export that document as the final PDF; inspect its page count (target
   8–15 pages), tables, diagram and screenshots.
-- [ ] Record a 5–10 minute video following sections 2–4 above.
+- [ ] Record a 5–10 minute video using `docs/DEMO_VIDEO_SCRIPT.md`; all three
+  members should speak and explain their actual contributions.
 - [ ] Include the repository URL, report PDF, video link and concise individual
   contributions statement in the LMS submission.
 - [ ] Have each member explain their assigned modules before submission; the

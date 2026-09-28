@@ -41,6 +41,26 @@ cleaning, enrichment, windowing and joining rather than merely moving records
 between tools. It must also expose a queryable output, structured logs and an
 alert/health rule.
 
+### Assessment requirement coverage
+
+| Requirement | Implementation | Evidence to include | Status |
+| --- | --- | --- | --- |
+| Continuous simulated source | Python telemetry generator publishes every three seconds to Kafka topic `fleet-telemetry`. | Producer JSON log with topic, vehicle, partition, and offset. | Implemented |
+| Daily simulated source | Python generator writes one atomic CSV row per vehicle; five minutes represents one simulated day. | CSV header and sample rows, plus generator log. | Implemented |
+| Kafka ingestion | Single-node Kafka KRaft service with three topic partitions; producer uses acknowledgements and retries. | Compose service and producer output. | Implemented |
+| Meaningful stream processing | Spark validates fields, enriches Colombo zone, applies a two-minute watermark, and aggregates five-minute metrics. | Spark batch-written log and `/metrics/fleet` response. | Implemented |
+| Batch reconciliation | Spark de-duplicates `(vehicle_id, trip_id)` observations, uses the maximum observed `on_trip` fare as a trip-revenue proxy, then left-joins daily expenses and calculates profit. | Successful Airflow tasks or batch log, CSV, and profitability API response. | Implemented |
+| Queryable output | PostgreSQL serves live metrics, profitability rows, and health transitions; Parquet and CSV retain analytical outputs. | API responses and report file. | Implemented |
+| Orchestration | Airflow generates the date-labelled expense feed and runs Spark reconciliation on a five-minute schedule. | DAG graph with both tasks successful. | Implemented |
+| Logging, metrics, and health alert | Structured JSON logs, Prometheus-style `/metrics`, and a 60-second pipeline no-data health rule. | Healthy response, 503 stale-data response, recovery response, and `/metrics`. | Implemented |
+| Vehicle-specific prolonged-idle alert | No per-vehicle idle-duration threshold or alert is currently implemented. | Do not claim this behavior in the report or video. | Not implemented; optional extension |
+
+The assignment's minimum observability requirement is satisfied by the
+pipeline-wide no-data alert. The use-case description also suggests a
+vehicle-specific prolonged-idle alert; that is a suggested output rather than
+the health rule delivered here, and is listed as future work rather than
+claimed as implemented.
+
 ## 2. Architecture decision: Lambda rather than Kappa
 
 We selected a Lambda architecture. The speed layer consumes telemetry from
@@ -96,11 +116,13 @@ watermark and five-minute event-time window control late data and create live
 metrics: total events, idle/on-trip/active counts, observed earnings, mean speed
 and idle ratio.
 
-The daily job selects one report date, de-duplicates trip records by vehicle and
-trip identifier, takes the maximum observed fare per trip, aggregates revenue by
-vehicle, and left-joins the expense feed. It calculates total expense, profit,
-profit margin and an unprofitable flag. A left join ensures a vehicle with costs
-but no recorded trip remains visible and is correctly identified as unprofitable.
+The daily job selects one report date, de-duplicates telemetry observations by
+vehicle and trip identifier, takes the maximum observed fare among `on_trip`
+events as a simplified trip-revenue proxy, aggregates it by vehicle, and
+left-joins the expense feed. It calculates total expense, profit, profit margin,
+and a profitability status. A left join ensures a vehicle with costs but no
+qualifying trip observation remains visible and is identified from its costs.
+This is simulated observed fare, not settled or audited payment revenue.
 
 ### Data quality and consistency controls
 
@@ -137,6 +159,9 @@ FastAPI provides:
 - `GET /metrics` for Prometheus-style serving gauges/counters.
 
 **[INSERT REAL SCREENSHOT: FastAPI docs and `/metrics/fleet` response]**
+![FastAPI endpoint documentation](evidence/fastapi-docs.png)
+
+![Live fleet metrics response](evidence/fleet-metrics-response.png)
 
 ## 6. Orchestration and observability
 
@@ -162,12 +187,22 @@ monitoring product.
 The completed demonstration must show JSON producer messages, Spark processing
 logs, current API metrics, one daily CSV, a profitability result and the health
 alert. The expected report contains all 20 simulated vehicles and identifies
-vehicles whose cost exceeds retained trip revenue. The exact counts and values
-are intentionally not fabricated in this report; they must come from the final
-run because the sources are random.
+vehicles whose cost exceeds observed trip-fare revenue. In the demonstrated
+2026-09-28 run, the API returned 20 vehicles and 10 unprofitable vehicles.
+Expense and telemetry values are randomized, so reruns will produce different
+figures. Use the final submission run's responses and screenshots as the
+authoritative evidence; replace the example counts here if that run differs.
+
+| Final demonstration result | Value from final run |
+| --- | --- |
+| Report date | `2026-09-28` (replace if final run uses another date) |
+| Vehicle rows returned | `20` (verify against final API response) |
+| Unprofitable vehicles | `10` in the demonstrated run (verify against final response) |
+| Latest live window and zone count | Record from final `/metrics/fleet` response |
+| Healthy-to-unhealthy-to-recovered health sequence | Attach the three captured status responses |
 
 **[INSERT REAL SCREENSHOT: Spark `utilization_metrics_batch_written` log]**
-**[INSERT REAL SCREENSHOT: generated profitability CSV/API report]**
+**[INSERT REAL SCREENSHOT: generated profitability CSV and API report]**
 
 ### Test strategy
 
@@ -184,10 +219,13 @@ ones.
 
 The project intentionally uses random data, a simple coordinate grid and a
 single Kafka broker. The fare model is simplified, and a telemetry event is not
-a full immutable trip lifecycle. At production scale, zones would come from a
-GIS polygon service, trip revenue would come from a transactional trip source,
-and schema validation would use a registry. Kafka would have multiple brokers,
-TLS/SASL authentication, monitored consumer lag and retention controls.
+a full immutable trip lifecycle. A vehicle-specific prolonged-idle alert is
+not implemented; the delivered 60-second rule detects stale pipeline output,
+not an individual vehicle's idle duration. At production scale, zones would
+come from a GIS polygon service, trip revenue would come from a transactional
+trip source, and schema validation would use a registry. Kafka would have
+multiple brokers, TLS/SASL authentication, monitored consumer lag and retention
+controls.
 
 Spark checkpoints and Parquet would live in object storage rather than the
 developer machine. A production serving store would use secrets management,
@@ -216,21 +254,24 @@ trade-offs change at production volume.
 
 ## 10. Individual contributions
 
-Replace the placeholders below with the team’s approved final statement.
+Replace the member labels with the actual names and student numbers. Adjust
+these statements to reflect the work each member personally completed.
 
 | Member | Contribution |
 | --- | --- |
-| Member 1 | Telemetry simulator, Kafka producer/broker configuration and source tests. |
-| Member 2 | Daily source, Spark streaming/batch processing, Parquet/PostgreSQL integration, API, Airflow, observability, documentation and tests. |
-| Member 3 | Independent end-to-end review, evidence capture, demo video, report finalisation and submission integration. |
+| Member 1: `[name, student number]` | Telemetry simulator and event contract, Kafka producer/topic configuration, and source tests. Presented streaming ingestion and Kafka behavior in the demo. |
+| Member 2: `[name, student number]` | Daily expense generator, Spark streaming and batch transformations, Parquet/PostgreSQL processing integration, and processing tests. Presented cleansing, windowing, and profitability logic in the demo. |
+| Member 3: `[name, student number]` | FastAPI and PostgreSQL serving, Docker Compose/Airflow integration, health and metrics, end-to-end verification, evidence capture, and submission integration. Presented API, orchestration, and observability in the demo. |
 
 ## 11. Reproducibility
 
-The root README contains exact local run commands. Docker Compose starts Kafka,
-PostgreSQL and FastAPI by default; Airflow is enabled through the
-`orchestration` profile. `docs/DEMO_AND_SUBMISSION_CHECKLIST.md` defines the
-clean-clone test procedure and required screenshots. The repository excludes
-generated data, virtual environments, Maven/Ivy artefacts and credentials.
+The root README contains the Windows PowerShell and WSL2 run commands. Docker
+Compose starts Kafka, PostgreSQL, and FastAPI by default; Airflow is enabled
+through the `orchestration` profile. `docs/DEMO_AND_SUBMISSION_CHECKLIST.md`
+defines the clean-clone test procedure and required screenshots.
+`docs/DEMO_VIDEO_SCRIPT.md` provides the three-person timed narration and
+recording checklist. The repository excludes generated data, virtual
+environments, Maven/Ivy artifacts, and credentials.
 
 ## References
 

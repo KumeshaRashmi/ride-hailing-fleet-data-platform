@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
@@ -35,12 +36,18 @@ def _value(row: Mapping[str, Any] | Any, name: str, default: Any = None) -> Any:
     return getattr(row, name, default)
 
 
+def _utc_timestamp(value: Any) -> Any:
+    if isinstance(value, datetime):
+        return value.astimezone(timezone.utc)
+    return value
+
+
 def upsert_utilization_metrics(rows: Iterable[Mapping[str, Any] | Any], database_url: str) -> int:
     """Upsert the newest aggregation state for each stream window and zone."""
     payload = [
         (
-            _value(row, "window_start"),
-            _value(row, "window_end"),
+            _utc_timestamp(_value(row, "window_start")),
+            _utc_timestamp(_value(row, "window_end")),
             _value(row, "zone"),
             int(_value(row, "telemetry_event_count", 0)),
             int(_value(row, "idle_event_count", 0)),
@@ -50,7 +57,7 @@ def upsert_utilization_metrics(rows: Iterable[Mapping[str, Any] | Any], database
             float(_value(row, "average_speed", 0.0) or 0.0),
             float(_value(row, "idle_ratio", 0.0) or 0.0),
             int(_value(row, "spark_batch_id", 0)),
-            _value(row, "processed_at"),
+            _utc_timestamp(_value(row, "processed_at")),
         )
         for row in rows
     ]

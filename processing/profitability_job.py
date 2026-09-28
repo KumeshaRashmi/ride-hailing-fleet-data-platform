@@ -112,7 +112,8 @@ def main() -> None:
             .withColumn("distance_covered", F.col("distance_covered").cast("double"))
             .where(F.col("vehicle_id").isNotNull())
         )
-        raw_events = spark.read.parquet(args.raw_events_path)
+        raw_events_path = str(Path(args.raw_events_path) / "part-*.parquet")
+        raw_events = spark.read.parquet(raw_events_path)
         report = build_profitability_report(expenses, raw_events, report_date)
 
         parquet_path = str(Path(args.output_root) / f"report_date={report_date}")
