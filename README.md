@@ -77,19 +77,26 @@ WSL. Docker commands below run in Windows PowerShell. Application commands run
 in WSL Bash. Docker Desktop's WSL integration is only needed if you also want
 to run Docker commands from inside WSL.
 
-### 1. Start Kafka, PostgreSQL, and the API
+### 1. Start Kafka, Kafka UI, PostgreSQL, and the API
 
 In **Windows PowerShell**, change to the repository root and start the base
 services:
 
 ```powershell
-docker compose up -d kafka postgres api
+docker compose up -d kafka kafka-ui postgres pgadmin api
 docker compose ps
 ```
 
 Wait for Kafka, PostgreSQL, and API to show as running/healthy. Open
-`http://localhost:8000/docs` to verify the API is available. Before Spark writes
-the first metric, `/health` is expected to report `degraded`.
+`http://localhost:8081` to inspect the `fleet-local` cluster and
+`fleet-telemetry` topic in Kafka UI. The producer running on the host continues
+to connect to Kafka at `localhost:9092`; Kafka UI connects over the Compose
+network to `kafka:29092`. Open `http://localhost:5050` for pgAdmin
+(local demo login: `fleet.admin@example.com` / `fleetadmin`). To register the
+database, use host `postgres`, port `5432`, maintenance database `fleet`, user
+`fleet`, and password `fleet`. These demo credentials are for local use only.
+Open `http://localhost:8000/docs` to verify the API is available. Before Spark
+writes the first metric, `/health` is expected to report `degraded`.
 
 ### 2. Create the WSL Python environment once
 
@@ -249,7 +256,7 @@ unprofitable vehicles vary because the generator uses random data.
 
 First confirm `/health` returns `200` and `healthy`. Stop **only the producer**
 with `Ctrl+C`; leave Spark, Docker, PostgreSQL, and the API running. After at
-least 61 seconds, request health again:
+least 121 seconds, request health again:
 
 ```bash
 curl -i "http://localhost:8000/health"

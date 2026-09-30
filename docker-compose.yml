@@ -33,11 +33,12 @@ services:
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENERS: INTERNAL://:29092,EXTERNAL://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
@@ -48,6 +49,19 @@ services:
       interval: 10s
       timeout: 10s
       retries: 10
+
+  kafka-ui:
+    image: ghcr.io/kafbat/kafka-ui:latest
+    container_name: fleet-kafka-ui
+    environment:
+      DYNAMIC_CONFIG_ENABLED: "false"
+      KAFKA_CLUSTERS_0_NAME: fleet-local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    ports:
+      - "8081:8080"
+    depends_on:
+      kafka:
+        condition: service_healthy
 
   postgres:
     image: postgres:16-alpine
@@ -67,6 +81,19 @@ services:
       timeout: 5s
       retries: 20
 
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: fleet-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: fleet.admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: fleetadmin
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "5050:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   api:
     build:
       context: .
@@ -74,7 +101,7 @@ services:
     container_name: fleet-api
     environment:
       FLEET_DATABASE_URL: postgresql://fleet:fleet@postgres:5432/fleet
-      NO_DATA_ALERT_SECONDS: 60
+      NO_DATA_ALERT_SECONDS: 120
     ports:
       - "8000:8000"
     depends_on:

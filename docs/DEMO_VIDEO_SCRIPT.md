@@ -11,13 +11,15 @@ credentials, API secrets, or unrelated personal information.
 
 ## Before recording
 
-1. Confirm Docker's Kafka, PostgreSQL, API, and Airflow containers are running.
+1. Confirm Docker's Kafka, Kafka UI, PostgreSQL, API, and Airflow containers
+   are running.
 2. Confirm the WSL producer and Spark streaming job are running and producing
    recent output. `/health` should currently return `healthy`.
 3. Confirm the API returns live metrics and a profitability report for the
    date you will show. Confirm the Airflow DAG has a successful run with both
    tasks green.
-4. Prepare browser tabs for `http://localhost:8000/docs`,
+4. Prepare browser tabs for `http://localhost:8081`,
+   `http://localhost:8000/docs`,
    `http://localhost:8000/metrics/fleet`,
    `http://localhost:8000/reports/profitability/[DATE]`,
    `http://localhost:8000/metrics`, and `http://localhost:8080`.
@@ -62,8 +64,9 @@ the contribution table in `FINAL_REPORT.md`.
 ### 0:50-2:00 | Sources and Kafka ingestion | Member 1
 
 **Show:** `data_generators/streaming_generator.py` briefly, then the producer
-terminal with published JSON records and changing Kafka offsets. If available,
-show the Kafka service as healthy in Docker Compose.
+terminal with published JSON records. Open Kafka UI at `http://localhost:8081`,
+select the `fleet-local` cluster and `fleet-telemetry` topic, and show recent
+messages plus the topic's partition/offset view.
 
 **Say:**
 
@@ -72,7 +75,10 @@ show the Kafka service as healthy in Docker Compose.
 > coordinates, speed, status, fare, and a UTC timestamp. The producer publishes
 > JSON to the `fleet-telemetry` Kafka topic. Here the producer log shows the
 > topic, vehicle, partition, and offset, so we can confirm events are being
-> accepted by Kafka rather than only generated locally.
+> accepted by Kafka rather than only generated locally. Kafka UI gives us a
+> browser view of the topic and its messages; our producer still connects to
+> the broker through the host address, while the UI connects over Docker's
+> internal network.
 >
 > The second source is a daily expense CSV. It contains one row per vehicle with
 > fuel cost, maintenance cost, distance, and a service flag. One simulated day
@@ -140,7 +146,7 @@ Spark report-created log from the successful Airflow execution.
 **Show:** First `/metrics`, then a healthy `/health` response. If the team has
 captured the full alert demonstration, show the stale-data 503 and subsequent
 recovery captures. Do not stop the producer during the main take unless enough
-time is available to wait for the 61-second threshold and recovery.
+time is available to wait for the 121-second threshold and recovery.
 
 **Member 2 says:**
 
@@ -150,7 +156,7 @@ time is available to wait for the 61-second threshold and recovery.
 **Member 3 says:**
 
 > The pipeline health rule becomes unhealthy when no metric has been processed
-> for more than 60 seconds. We verified the transition from healthy to a 503
+> for more than 120 seconds. We verified the transition from healthy to a 503
 > unhealthy response after stopping the producer, then restarted the producer
 > and confirmed health recovered after Spark wrote a new metric batch. This is a
 > pipeline freshness alert. A separate alert for one vehicle remaining idle for
@@ -162,7 +168,7 @@ time is available to wait for the 61-second threshold and recovery.
 > and pipeline health monitoring. Thank you.
 
 **If you did not capture the alert/recovery:** Do not say “we verified” in the
-spoken line. Instead say, “The implemented rule reports unhealthy after 60
+spoken line. Instead say, “The implemented rule reports unhealthy after 120
 seconds without a processed metric; our final report records the health checks
 we completed.”
 
@@ -195,9 +201,11 @@ microphone recording and window capture before relying on it for the final video
 - [ ] Architecture choice and reasons are explained.
 - [ ] Both source types and the five-minute simulated day are shown.
 - [ ] Kafka producer output and Spark processing evidence are visible.
+- [ ] Kafka UI shows the `fleet-telemetry` topic and recent messages.
 - [ ] Live zone metrics and the same-date profitability report are demonstrated.
 - [ ] The successful Airflow DAG is shown.
 - [ ] Health/metrics are shown, and alert claims match captured evidence.
 - [ ] The optional vehicle-specific idle alert is described as unimplemented.
 - [ ] Audio is understandable and no secrets or private data are exposed.
 - [ ] The recorded file plays from beginning to end.
+d

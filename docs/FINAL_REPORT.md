@@ -52,7 +52,7 @@ alert/health rule.
 | Batch reconciliation | Spark de-duplicates `(vehicle_id, trip_id)` observations, uses the maximum observed `on_trip` fare as a trip-revenue proxy, then left-joins daily expenses and calculates profit. | Successful Airflow tasks or batch log, CSV, and profitability API response. | Implemented |
 | Queryable output | PostgreSQL serves live metrics, profitability rows, and health transitions; Parquet and CSV retain analytical outputs. | API responses and report file. | Implemented |
 | Orchestration | Airflow generates the date-labelled expense feed and runs Spark reconciliation on a five-minute schedule. | DAG graph with both tasks successful. | Implemented |
-| Logging, metrics, and health alert | Structured JSON logs, Prometheus-style `/metrics`, and a 60-second pipeline no-data health rule. | Healthy response, 503 stale-data response, recovery response, and `/metrics`. | Implemented |
+| Logging, metrics, and health alert | Structured JSON logs, Prometheus-style `/metrics`, and a 120-second pipeline no-data health rule. | Healthy response, 503 stale-data response, recovery response, and `/metrics`. | Implemented |
 | Vehicle-specific prolonged-idle alert | No per-vehicle idle-duration threshold or alert is currently implemented. | Do not claim this behavior in the report or video. | Not implemented; optional extension |
 
 The assignment's minimum observability requirement is satisfied by the
@@ -174,7 +174,7 @@ daily feed from being joined to an unintended report date.
 All producer, generator, Spark and API lifecycle messages are structured JSON.
 The API records request/error counters and serving-row/telemetry-age gauges.
 The basic alert rule marks the service unhealthy if no streaming metric has been
-processed for more than 60 seconds. It persists health-state transitions to the
+processed for more than 120 seconds. It persists health-state transitions to the
 `pipeline_alerts` table. This is a useful demo rule because it detects a stopped
 producer, Kafka interruption or failed Spark stream without needing an external
 monitoring product.

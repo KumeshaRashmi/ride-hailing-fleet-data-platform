@@ -26,7 +26,7 @@ from storage.postgres import (
 
 
 DATABASE_URL = os.getenv("FLEET_DATABASE_URL", "postgresql://fleet:fleet@postgres:5432/fleet")
-NO_DATA_ALERT_SECONDS = int(os.getenv("NO_DATA_ALERT_SECONDS", "60"))
+NO_DATA_ALERT_SECONDS = int(os.getenv("NO_DATA_ALERT_SECONDS", "120"))
 LOGGER = get_logger("fleet.api")
 REQUESTS: Counter[str] = Counter()
 REQUEST_LOCK = Lock()
@@ -66,7 +66,7 @@ def root() -> dict[str, str]:
 
 @app.get("/health", tags=["observability"])
 def health() -> Any:
-    """Health rule: mark unhealthy when Spark has not processed data for 60 seconds."""
+    """Report unhealthy when no Spark metrics arrive within the configured threshold."""
     global LAST_ALERT_STATUS  # pylint: disable=global-statement
     try:
         snapshot = fetch_health_snapshot(DATABASE_URL)

@@ -44,7 +44,7 @@ for the end-to-end evidence required by the assignment.
 - [ ] Capture the DAG graph and both successful task instances.
 - [ ] Capture `GET /metrics` showing API counters and telemetry-age gauge.
 - [ ] While healthy, capture `GET /health` with its latest `processed_at` value.
-- [ ] Stop the producer, wait **at least 61 seconds**, then capture `/health`
+- [ ] Stop the producer, wait **at least 121 seconds**, then capture `/health`
   returning `503` and `unhealthy`.
 - [ ] Restart the producer, wait for a Spark metric batch, then capture healthy
   recovery. This proves the health rule is an actual alert rather than a static

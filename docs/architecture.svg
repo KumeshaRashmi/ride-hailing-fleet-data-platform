@@ -21,5 +21,5 @@
   <path d="M410 426 H480" class="arrow"/><rect x="480" y="370" width="190" height="112" rx="10" class="batch"/><text x="575" y="410" class="label">Spark batch</text><text x="575" y="434" class="small">revenue/cost join</text><text x="575" y="458" class="small">profitability report</text>
   <path d="M670 426 H748" class="arrow"/><rect x="748" y="370" width="180" height="112" rx="10" class="batch"/><text x="838" y="410" class="label">Parquet + CSV</text><text x="838" y="434" class="small">daily report</text>
   <path d="M928 426 H1000" class="arrow"/><rect x="1000" y="370" width="165" height="112" rx="10" class="serve"/><text x="1082" y="410" class="label">PostgreSQL</text><text x="1082" y="434" class="small">profitability upsert</text>
-  <text x="600" y="545" class="small">Structured JSON logs across every layer • /metrics export • unhealthy after 60 seconds without processed telemetry</text>
+  <text x="600" y="545" class="small">Structured JSON logs across every layer • /metrics export • unhealthy after 120 seconds without processed telemetry</text>
 </svg>

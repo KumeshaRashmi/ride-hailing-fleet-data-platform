@@ -33,7 +33,7 @@ The missing functional layers have now been implemented in this branch:
 - PostgreSQL schema/upsert adapter and FastAPI serving endpoints;
 - Docker Compose services for PostgreSQL, FastAPI and optional Airflow;
 - Airflow DAG for the five-minute simulated daily reconciliation;
-- JSON logging, Prometheus-style API metrics, and a 60-second no-data health
+- JSON logging, Prometheus-style API metrics, and a 120-second no-data health
   rule that persists alert transitions; and
 - a report draft, runbook and submission checklist under `docs/`.
 
@@ -45,7 +45,7 @@ the implementation. Their required deliverables are:
    branch; do not change data contracts without team agreement.
 2. Capture genuine screenshots of the running producer, Spark stream, API
    `/metrics/fleet`, daily profitability endpoint, Airflow successful DAG, and
-   the `/health` 60-second no-data alert/recovery. Replace each marked evidence
+   the `/health` 120-second no-data alert/recovery. Replace each marked evidence
    placeholder in `docs/FINAL_REPORT.md`.
 3. Record a 5–10 minute demo video, export `docs/FINAL_REPORT.md` to the final
    PDF, and verify the repository contains no credentials, virtual environments,
@@ -66,7 +66,7 @@ Before merging the three branches, demonstrate the following in order:
    least the revenue, costs, profit and profitability status columns.
 5. The API returns current utilization and the selected day's unprofitable vehicles.
 6. Stopping the producer causes the documented no-data health alert within
-   60 seconds; restarting it returns the service to healthy.
+   120 seconds; restarting it returns the service to healthy.
 
 ## Important integration rules
 

@@ -60,7 +60,7 @@ randomized run if the final screenshots show different data.
 ## 4. Keep claims aligned with implementation
 
 The project implements a pipeline-wide no-data health rule: it reports
-unhealthy when no streaming metric has been processed for more than 60 seconds.
+unhealthy when no streaming metric has been processed for more than 120 seconds.
 It does **not** currently alert when an individual vehicle has remained idle for
 a configured duration. The report and video script disclose this gap. Do not
 claim that per-vehicle idle alert behavior was demonstrated.
