@@ -19,15 +19,19 @@ credentials, API secrets, or unrelated personal information.
    date you will show. Confirm the Airflow DAG has a successful run with both
    tasks green.
 4. Prepare browser tabs for `http://localhost:8081`,
-   `http://localhost:8000/docs`,
+   `http://localhost:5050`, `http://localhost:8000/docs`,
    `http://localhost:8000/metrics/fleet`,
    `http://localhost:8000/reports/profitability/[DATE]`,
    `http://localhost:8000/metrics`, and `http://localhost:8080`.
-   Replace `[DATE]` with the actual report date.
+   Replace `[DATE]` with a date that has a report; do not assume today's report
+   exists.
 5. Keep the WSL terminals visible or arrange them in a readable layout. Have the
    producer JSON log, Spark `utilization_metrics_batch_written` log, daily CSV,
    and successful Airflow run ready to show. Avoid waiting for a new five-minute
    window during the recording if a fresh successful batch is already available.
+   Log in to pgAdmin, set its master password, register the `postgres` server,
+   and open the `fleet` database table before recording so no setup dialogs or
+   credentials appear in the video.
 6. Agree on speaker handoffs and pronounce technology names consistently:
    Kafka, Spark Structured Streaming, Parquet, PostgreSQL, FastAPI, and Airflow.
 7. Close unrelated windows, silence notifications, hide credentials, set the
@@ -44,133 +48,49 @@ credentials, API secrets, or unrelated personal information.
 Change the assignments to reflect the work each person actually performed and
 the contribution table in `FINAL_REPORT.md`.
 
-## Timed narration and screen cues
+## Timed Screen-by-Screen Recording Guide
 
-### 0:00-0:50 | Opening and business problem | Member 3
+Record for about **8 minutes**. Keep the title and architecture on slides only
+for the first 50 seconds. At 0:50, switch to the live project and stay on real
+terminals and browser pages for the rest of the video. Prepare the browser tabs
+and position terminals before recording; do not type long commands on camera.
 
-**Show:** Project title, then the architecture diagram in
-`docs/architecture.svg` or the architecture section of the report.
+| Time | What must be on screen | Speaker and narration cue |
+| --- | --- | --- |
+| 0:00-0:15 | PowerPoint title slide: project name, course, team member names. | Member 3: Introduce the team and project in one sentence. |
+| 0:15-0:50 | PowerPoint architecture slide, or the architecture diagram full-screen. Point to the live path and batch path as you explain them. | Member 3: Explain the operator's two questions: live fleet status and daily vehicle profitability. State that continuous telemetry and daily expenses use separate Lambda paths. |
+| 0:50-1:10 | VS Code or editor showing `data_generators/streaming_generator.py`; keep only the relevant event fields visible. | Member 1: Say that the simulator represents 20 vehicles and emits telemetry every three seconds. Name a few fields such as vehicle, location, status, speed, and fare. |
+| 1:10-1:30 | Producer terminal with recent `telemetry_event_published` JSON lines. | Member 1: Point out the topic, vehicle, partition, and offset to show that events are being published. |
+| 1:30-1:55 | Kafka UI at `http://localhost:8081`: `fleet-local` cluster, then `fleet-telemetry` topic and its recent messages/partition view. | Member 1: Explain that Kafka UI lets us inspect messages accepted by the broker. |
+| 1:55-2:15 | Open `data_lake/daily_expenses/vehicle_expenses_2026-09-30.csv` in VS Code. Show the header and two or three rows; use the date file from the actual run if different. | Member 1: Describe fuel cost, maintenance cost, distance, and service flag; note that five real minutes represent one simulated day. |
+| 2:15-2:45 | Spark terminal showing `spark_streaming_started` and the latest `utilization_metrics_batch_written` log. | Member 2: Explain that Spark consumes Kafka events, validates them, assigns Colombo zones, and writes metric batches. |
+| 2:45-3:15 | Briefly show the relevant section of `processing/stream_processor.py`, then return to the Spark log. Avoid scrolling through unrelated code. | Member 2: Mention the two-minute watermark and five-minute event-time windows. Do not pause long on source code. |
+| 3:15-3:45 | `http://localhost:8000/metrics/fleet`, with all four zone rows and the latest window visible. | Member 2: Explain the event counts, idle ratio, observed earnings, and that metrics are served from PostgreSQL and retained in Parquet. |
+| 3:45-4:15 | Show the generated profitability CSV header and a few rows. | Member 2: Explain that the batch job combines observed trip-fare revenue with daily expenses; clarify that observed fare is a proxy, not settled payment data. |
+| 4:15-4:45 | `http://localhost:8000/reports/profitability/[DATE]`, using the date that actually exists. Keep vehicle count and unprofitable summary at the top. | Member 3: State the report date and actual counts visible on screen. Explain that randomized input means counts can vary. |
+| 4:45-5:10 | pgAdmin at `http://localhost:5050`, with the `fleet` database and `fleet_utilization_metrics` or `daily_vehicle_profitability` table open. | Member 3: Show that API results are backed by PostgreSQL. Do not show or say the pgAdmin master password. |
+| 5:10-6:00 | Airflow at `http://localhost:8080`, DAG graph for `daily_fleet_profitability_reconciliation`, both tasks green. | Member 3: Explain that Airflow creates the dated expense feed and runs the reconciliation task; point to the successful run date. |
+| 6:00-6:35 | `http://localhost:8000/metrics`, then `/health` showing the current status. | Member 2: Describe the request counters, serving row count, and telemetry age. Member 3: Explain the configured 120-second freshness threshold. |
+| 6:35-7:10 | Optional: show prepared captures of healthy, stale-data 503, and recovered health responses. Do not stop the producer and wait during the recording. | Member 3: Describe the captured transition only if you actually recorded it. Otherwise say the health rule detects stale pipeline data and do not claim a transition was demonstrated. |
+| 7:10-8:00 | Return to the architecture slide or keep the live metrics page visible; finish on a stable, readable screen. | Members 2 and 3: Summarize Kafka ingestion, Spark processing, PostgreSQL/API serving, Airflow reconciliation, and the key limitation: per-vehicle idle-duration alerts are not implemented. Thank the audience. |
 
-**Say:**
+### Screen-Switch Checklist
 
-> Hello, we are [Member 1], [Member 2], and [Member 3]. This is our Applied Big
-> Data Engineering mini-project: a ride-hailing fleet data platform. The
-> operator needs two answers: what is happening across the fleet now, and which
-> vehicles are unprofitable after daily fuel and maintenance costs are included.
-> We chose a Lambda architecture because telemetry is continuous while partner
-> expenses arrive as a daily file. The live path and the reconciliation path
-> have different processing and latency needs.
+Use this order so every transition is deliberate: **title slide → architecture
+slide → generator source → producer terminal → Kafka UI → expense CSV → Spark
+terminal → stream processor source → live fleet API → profitability CSV → dated
+profitability API → pgAdmin → Airflow DAG → API metrics/health → closing
+slide**. Leave each output visible long enough to read; avoid rapid scrolling.
 
-### 0:50-2:00 | Sources and Kafka ingestion | Member 1
+Replace `[DATE]` in the profitability URL with a date that has a generated
+report. Do not use today's date unless that report exists. Use actual values
+visible in the API response rather than memorized example counts.
 
-**Show:** `data_generators/streaming_generator.py` briefly, then the producer
-terminal with published JSON records. Open Kafka UI at `http://localhost:8081`,
-select the `fleet-local` cluster and `fleet-telemetry` topic, and show recent
-messages plus the topic's partition/offset view.
-
-**Say:**
-
-> The continuous source simulates 20 vehicles and emits a telemetry event every
-> three seconds. Events contain trip, driver, and vehicle identifiers, Colombo
-> coordinates, speed, status, fare, and a UTC timestamp. The producer publishes
-> JSON to the `fleet-telemetry` Kafka topic. Here the producer log shows the
-> topic, vehicle, partition, and offset, so we can confirm events are being
-> accepted by Kafka rather than only generated locally. Kafka UI gives us a
-> browser view of the topic and its messages; our producer still connects to
-> the broker through the host address, while the UI connects over Docker's
-> internal network.
->
-> The second source is a daily expense CSV. It contains one row per vehicle with
-> fuel cost, maintenance cost, distance, and a service flag. One simulated day
-> is five real minutes, which makes the daily path demonstrable in a lab session.
-
-### 2:00-4:05 | Spark transformations and batch logic | Member 2
-
-**Show:** Spark terminal. Point to `spark_streaming_started` and a recent
-`utilization_metrics_batch_written` event. Then show
-`/metrics/fleet`. Briefly show `processing/stream_processor.py` and
-`processing/profitability_job.py` only if readable without scrolling through
-large code blocks.
-
-**Say:**
-
-> Spark Structured Streaming reads Kafka using an explicit event schema. It
-> filters invalid identifiers, timestamps, statuses, speeds, and fares, then
-> maps coordinates into four Colombo zones. A two-minute watermark handles late
-> events, and five-minute event-time windows calculate event counts, idle and
-> active counts, observed earnings, average speed, and idle ratio.
->
-> This API response is the latest window, grouped by zone. The live aggregate is
-> upserted to PostgreSQL and retained in Parquet. For the daily report, the batch
-> job filters telemetry to a report date, groups observations by vehicle and
-> trip, and uses each trip's maximum observed on-trip fare as a simplified
-> revenue proxy. It left-joins expenses so vehicles with costs and no qualifying
-> trip observations still appear in the report. This is simulated observed fare,
-> not a settlement or audited payment feed.
-
-### 4:05-5:25 | Daily output and API | Member 3
-
-**Show:** The generated CSV header and a few rows, then the profitability API
-response for the same date. Keep the full response available, but scroll to the
-vehicle count and unprofitable summary first.
-
-**Say:**
-
-> The daily reconciliation writes Parquet and a human-readable CSV, then
-> upserts one row per report date and vehicle into PostgreSQL. The API returns
-> all 20 simulated vehicles for this run and summarizes which ones are
-> unprofitable. The exact costs and profitability counts can change because the
-> inputs are randomized. The `/docs` page exposes the endpoints, while
-> `/metrics/fleet` and the dated profitability endpoint provide the business
-> outputs to other clients.
-
-**Show:** `http://localhost:8000/docs`, then
-`http://localhost:8000/reports/profitability/[DATE]`.
-
-### 5:25-6:35 | Airflow orchestration | Member 3
-
-**Show:** Airflow DAG graph for a successful run, with
-`create_expense_feed` and `reconcile_daily_report` green. Optionally show the
-Spark report-created log from the successful Airflow execution.
-
-**Say:**
-
-> Airflow coordinates the daily path. The first task creates the date-labelled
-> expense feed; the second runs Spark reconciliation and loads the report. This
-> graph shows both tasks succeeded for [DATE]. The five-minute schedule matches
-> the compressed simulated day. We avoid launching overlapping manual and
-> scheduled reconciliations because both write the same report-date output.
-
-### 6:35-7:45 | Observability and conclusion | Members 2 and 3
-
-**Show:** First `/metrics`, then a healthy `/health` response. If the team has
-captured the full alert demonstration, show the stale-data 503 and subsequent
-recovery captures. Do not stop the producer during the main take unless enough
-time is available to wait for the 121-second threshold and recovery.
-
-**Member 2 says:**
-
-> Processing components emit structured JSON logs, and the API exports request
-> counters, serving row counts, and the age of the latest telemetry metric.
-
-**Member 3 says:**
-
-> The pipeline health rule becomes unhealthy when no metric has been processed
-> for more than 120 seconds. We verified the transition from healthy to a 503
-> unhealthy response after stopping the producer, then restarted the producer
-> and confirmed health recovered after Spark wrote a new metric batch. This is a
-> pipeline freshness alert. A separate alert for one vehicle remaining idle for
-> a configured duration is not implemented in this version and is a possible
-> extension.
->
-> In summary, our demo shows Kafka ingestion, Spark streaming and batch
-> processing, queryable API outputs, Airflow orchestration, Parquet retention,
-> and pipeline health monitoring. Thank you.
-
-**If you did not capture the alert/recovery:** Do not say “we verified” in the
-spoken line. Instead say, “The implemented rule reports unhealthy after 120
-seconds without a processed metric; our final report records the health checks
-we completed.”
+For the health segment, the configured threshold is 120 seconds. The full
+healthy-to-unhealthy-to-recovered demonstration takes several minutes, so use
+captures from a completed test rather than stopping the producer during this
+recording. If no captures exist, show current health and explain the rule without
+claiming the transition was verified.
 
 ## Recording with OBS Studio
 
@@ -185,9 +105,10 @@ we completed.”
 4. Set the microphone level so speech is clear and does not peak into clipping.
    Record a 10-second test, play it back, and confirm both screen and audio are
    present.
-5. Start recording, pause briefly before speaking, follow the timed outline,
-   and leave a short pause at each speaker handoff. Avoid typing long commands
-   live; prepare the running system and evidence views first.
+5. Start recording, pause briefly before speaking, follow the screen-switch
+   checklist in order, and leave a short pause at each speaker handoff. Avoid
+   typing long commands live; prepare the running system and evidence views
+   first.
 6. Stop recording, watch the entire file once, and check that the DAG status,
    API responses, logs, and speech are readable. Rename it using a clear pattern
    such as `Ride-Hailing-Fleet-Data-Platform-Demo.mp4`.
