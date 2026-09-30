@@ -1,0 +1,11 @@
+.git/
+.venv/
+.ivy2/
+.pip-temp/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+data_lake/
+reports/
+logs/
+docs/*.pdf
